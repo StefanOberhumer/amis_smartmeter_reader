@@ -61,24 +61,39 @@ UFB floatvar;
 bool buffered;
 AsyncServer* meter_server;
 
+
+static void WriteModbusEvent(String msg, AsyncClient* client)
+{
+  unsigned long now = millis();
+  if (now < 90000ul || now > (5ul*60ul + 90ul) * 1000ul) {
+    // Just do logging between ~ 90sec < uptime < 390sec (~1,5min till 6,5min min)
+    return;
+  }
+  writeEvent("INFO", "Modbus", msg + "\n" + client->remoteIP().toString()+":"+String(client->remotePort()), String(millis()));
+}
+
+
  /* clients events */
 static void handleError(void* arg, AsyncClient* client, int8_t error) {
 	//eprintf("[Fronius] connection error %s from client %s \n", client->errorToString(error), client->remoteIP().toString().c_str());
+  WriteModbusEvent("handleError", client);
 }
 
 static void handleDisconnect(void* arg, AsyncClient* client) {
 	//eprintf("[Fronius] client %s disconnected \n", client->remoteIP().toString().c_str());
+  WriteModbusEvent("handleDisconnect", client);
 }
 
 static void handleTimeOut(void* arg, AsyncClient* client, uint32_t time) {
 	//eprintf("[Fronius] client ACK timeout ip: %s \n", client->remoteIP().toString().c_str());
+  WriteModbusEvent("handleTimeOut", client);
 }
 
 static void handleData(void* arg, AsyncClient* client, void *data, size_t len);
 
 static void handleNewClient(void* arg, AsyncClient* client) {
 	eprintf("[Fronius] new client has been connected to server, ip: %s\n", client->remoteIP().toString().c_str());
-
+  WriteModbusEvent("handleNewClient", client);
 	// register events
 	client->onData(&handleData, NULL);
 	client->onError(&handleError, NULL);
@@ -87,9 +102,28 @@ static void handleNewClient(void* arg, AsyncClient* client) {
 }
 
 static void handleData(void* arg, AsyncClient* client, void *data, size_t len) {
+  WriteModbusEvent("handleData", client);
   //eprintf("[Fronius] Poll IP:%s\n",client->remoteIP().toString().c_str());
   if (valid!=5) return;               // erst beantworten wenn Zählerdaten vorhanden
 	memcpy(mHeader,data,len);
+
+# if 1
+    // Logging des headers
+    {
+        char msg[62];
+        sprintf(msg, "MBAP Header(%d):"      // 14B + %d
+                     " %02x %02x %02x %02x"  // 4*3B
+                     " %02x %02x %02x %02x"  // 4*3B
+                     " %02x %02x %02x %02x", // 4*3B + 1B
+            len,
+            mHeader[0], mHeader[1], mHeader[2], mHeader[3],
+            mHeader[4], mHeader[5], mHeader[6], mHeader[7],
+            mHeader[8], mHeader[9], mHeader[10], mHeader[11]);
+        WriteModbusEvent(msg, client);
+    }
+#endif
+
+
   uint16_t reg_idx=(mHeader[8]<<8) | mHeader[9];
   uint16_t reg_len=(mHeader[10]<<8) | mHeader[11];
 //	eprintf("[Fronius] RegIdx:%d RegLen:%02d Dta:",reg_idx,reg_len);
