@@ -1,6 +1,7 @@
 #include "AmisReader.h"
 
 #include "aes.h"
+#include "ModbusSmartmeterEmulation.h"
 #include "UA.h"
 #include "Utils.h"
 
@@ -654,7 +655,11 @@ void AmisReaderClass::processStateCounters(const unsigned long msNow)
             valid = 0;
             //writeEvent("INFO", "amis", "Invalid data receifed", "Failed");
         }
+
         _state = readReaderCounters;
+
+        // TODO: Refactor - Create events on changed data
+        ModbusSmartmeterEmulation.setCurrentValues( (bool)(valid == 5), l_result.results[4], l_result.results[5], l_result.results[0],l_result.results[1]);
     }
 }
 
@@ -695,6 +700,7 @@ void AmisReaderClass::loop()
         }
         amisNotOnline=true;
         valid = 0;
+        ModbusSmartmeterEmulation.setCurrentValues(false);
 
         _stateErrorCnt = 0;
 
