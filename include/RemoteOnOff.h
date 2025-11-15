@@ -6,14 +6,15 @@ class RemoteOnOffClass {
 public:
     RemoteOnOffClass();
     void init();
-    bool config(String &urlOn, String &urlOff, unsigned int switchInterval, int switchOnSaldoW, int switchOffSaldoW);
+    bool config(String &urlOn, String &urlOff, unsigned int switchInterval, int switchOnSaldoW, int switchOffSaldoW, bool honorHttpResult=false);
     void loop();
-    void setCurrentValues(bool dataAreValid, uint32_t v1_7_0, uint32_t v2_7_0);
+    void addCurrentValues(bool dataAreValid, uint32_t v1_7_0, uint32_t v2_7_0);
 
 private:
     String _urlOn, _urlOff;
     unsigned long _switchIntervalMs;
     long _switchOnSaldoW, _switchOffSaldoW;
+    bool _honorHttpResult;
 
     bool _enabled = false;
 
@@ -30,7 +31,7 @@ private:
     } switchState_t;
     switchState_t _lastSentState = undefined;
 
-    int sendURL(switchState_t newState);
+    void sendURL(switchState_t stateToSend, unsigned long now);
 };
 
 extern RemoteOnOffClass RemoteOnOff;

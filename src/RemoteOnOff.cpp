@@ -1,11 +1,15 @@
-// Anhand des Durchschnitts-Saldos des letzte 5 Sekunden
-// vergleichen mit einem Aus- und Einschaltert,
-// wird eine URL aufgerufen.
+// Abhängig des Durchschnitts-Saldos der letzten 5 Zählerwerte
+// (üblicherweise - die letzten 5 Sekunden) verglichen
+// mit einem Aus- / Einschaltwert, wird eine URL aufgerufen.
 //
-// Das kann z.B. für eine via Netzwerk schaltbare Steckdose verwendet werden
+// Das kann z.B. für eine via Netzwerk schaltbare Steckdose verwendet werden.
 //
-// Um nicht dauern ein-/auszuschalten, wird ein Interval angegeben, welches
-// beim Wechsel zwischen ein/aus nicht unterschritten wird
+// Um nicht dauernd ein-/auszuschalten, wird ein Interval angegeben, welches
+// beim Wechsel zwischen ein/aus nicht unterschritten wird.
+//
+// Sollte der AmisReader den Sync mit dem Zähler verlieren, wird
+// dies einfach ignoriert (diese Werte werden nicht berücksichtigt)
+
 
 #include "RemoteOnOff.h"
 
@@ -13,14 +17,12 @@
 #include <ESP8266HTTPClient.h>
 
 // TODO: Fragen zu dem Thema:
-// * Was tun wir, solange wir keine Zählerdaten haben
 // * Soll vor einem Reboot noch Ein-/Ausgeschaltet werden
-// * Was tun, wenn der Sync zum Zähler verlorengeht
 // * Was tun, wenn die Konfiguration während der Laufzeit geändert wird
 // * Ev. harmonisches Mittel verwenden?
 
 
-// TODO: Refactor this value
+// TODO: Refactor this external values
 extern int valid;
 extern uint32_t a_result[10];
 
@@ -35,29 +37,31 @@ void RemoteOnOffClass::init()
 {
 }
 
-int RemoteOnOffClass::sendURL(switchState_t newState)
+void RemoteOnOffClass::sendURL(switchState_t stateToSend, unsigned long now)
 {
     int httpResultCode;
     HTTPClient http;
     WiFiClient client;
-    http.begin(client, (newState == on) ?_urlOn :_urlOff );
+    http.begin(client, (stateToSend == on) ?_urlOn :_urlOff );
     http.setReuse(false);
     httpResultCode = http.GET();
     http.end();
-
-    if (httpResultCode == HTTP_CODE_OK) {
-        // writeEvent("INFO", "sys", "Switch XX Url sent", "");
-        // TODO: Check if we should update '_lastSentState' just here
+    if ( (_honorHttpResult && httpResultCode == HTTP_CODE_OK) || (!_honorHttpResult) ) {
+        _lastSentState = stateToSend;
     }
-    return httpResultCode;
+    _lastSwitchedMs = now;  // TODO: should we also update _lastSwitchedMs just on success?
 }
 
-bool RemoteOnOffClass::config(String &urlOn, String &urlOff, unsigned int switchIntervalSec, int switchOnSaldoW, int switchOffSaldoW)
+bool RemoteOnOffClass::config(String &urlOn, String &urlOff,
+                              unsigned int switchIntervalSec,
+                              int switchOnSaldoW, int switchOffSaldoW,
+                              bool honorHttpResult)
 {
     if (switchOnSaldoW >= switchOffSaldoW) {
         return false;
     }
 
+    _honorHttpResult = honorHttpResult;
     _urlOn = urlOn;
     _urlOff = urlOff;
     if (_urlOn.length() > 0 && _urlOff.length() > 0) {
@@ -80,7 +84,7 @@ bool RemoteOnOffClass::config(String &urlOn, String &urlOff, unsigned int switch
     return true;
 }
 
-void RemoteOnOffClass::setCurrentValues(bool dataAreValid, uint32_t v1_7_0, uint32_t v2_7_0)
+void RemoteOnOffClass::addCurrentValues(bool dataAreValid, uint32_t v1_7_0, uint32_t v2_7_0)
 {
     if (!dataAreValid) {
         return;
@@ -109,7 +113,11 @@ void RemoteOnOffClass::loop()
     }
     _lastLoopMs = now;
 
-    setCurrentValues(valid==5, a_result[4], a_result[5]); // TODO: Das sollte Event-getriggert sein
+    addCurrentValues(valid==5, a_result[4], a_result[5]); // TODO: Das sollte Event-getriggert sein
+
+    // TODO: Prüfen, ob wir überhaupt mit dem Netzwerk verbunden sind
+
+    // TODO: Nachdem booten (wenn _lastSentState == undefined zuerst mal ausschalten)
 
     if(_saldoHistoryLen != std::size(_saldoHistory)) {
         // Zuerst sollten wir die History vollständig gefüllt haben
@@ -140,11 +148,7 @@ void RemoteOnOffClass::loop()
     if (newState == undefined || newState == _lastSentState) {
         return;
     }
-
-    sendURL(newState);
-
-    _lastSentState = newState;
-    _lastSwitchedMs = now;
+    sendURL(newState, now);
 }
 
 RemoteOnOffClass RemoteOnOff;
