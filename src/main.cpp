@@ -44,6 +44,7 @@ kwhstruct kwh_hist[7];
 bool inAPMode,mqttStatus;
 ADC_MODE(ADC_VCC);
 
+#include "RebootAtMidnight.h"
 
 void setup(){
   #if DEBUGHW==2
@@ -58,6 +59,10 @@ void setup(){
 
   // Start filesystem early - so we can do some logging
   LittleFS.begin();
+
+  // Set timezone to CET/CEST
+  setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
+  tzset();
 
   // Start AMIS-Reader ... it can use the time to get the serailnumber
   AmisReader.init(1);  // Init mit Serieller Schnittstelle #1
@@ -91,10 +96,20 @@ void setup(){
     }
   }
 
+  // Netzwerksteckdose (On/Off via Netzwerk)
   RemoteOnOff.init();
   RemoteOnOff.config(Config.switch_url_on, Config.switch_url_off, Config.switch_intervall, Config.switch_on, Config.switch_off);
 
-  if (Config.log_sys) writeEvent("INFO", "sys", "System setup completed, running", "");
+  // Reboot um Mitternacht?
+  RebootAtMidnight.init();
+  RebootAtMidnight.config(&shouldReboot);
+  if (Config.reboot0) {
+    RebootAtMidnight.enable();
+  }
+
+  if (Config.log_sys) {
+    writeEvent("INFO", "sys", "System setup completed, running", "");
+  }
 }
 
 void loop() {
@@ -254,13 +269,6 @@ void secTick() {
         mon_local=mon;
       }
       first_frame=2;                  // Wochen- + Monatstabelle Energie neu erzeugen
-
-     if ((millis()/1000 > 43200) && (Config.reboot0))      // Reboot wenn uptime > 12h
-      {
-          writeEvent("INFO", "sys", "Reboot uptime>12h", "");
-		  delay(10);
-          ESP.restart();
-      }
     }
   }
 
