@@ -49,6 +49,9 @@ public:
 
     bool developerModeEnabled;
     bool webserverTryGzipFirst;
+
+private:
+    void loadConfigGeneralMinimal();
 };
 
 extern ConfigClass Config;
