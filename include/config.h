@@ -48,7 +48,6 @@ public:
     char amis_key[32 + 1]; // max Amiskey length = 32 + "\0"
 
     bool developerModeEnabled;
-    bool webserverTryGzipFirst;
 
 private:
     void loadConfigGeneralMinimal();
