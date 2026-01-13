@@ -712,6 +712,17 @@
           <br>
           <div class="pure-g hist">
             <div class="pure-u-1">
+              <h3>Version 1.5.6-dev1</h3>
+              <a href="https://github.com/mgerhard74/amis_smartmeter_reader/issues/41">Issue #41</a>: Bug beim Start des Lesers behoben.<br>
+              Im AP-Modus (wenn Jumper gesetzt), wird nun zumindest der AMIS-Key gelesen, damit der Zähler auch einfach "nur" im AP-Modus betrieben werden kann.<br>
+              Webserverdateien werden nun direkt aus der Firmware übertragen und nicht mehr im Filesystem abgelegt. Das sollte auch Probleme mit dem Bowser Cache beseitigen.<br>
+              Bei der WiFi Verbindung kann der Kanal gewählt werden.<br>
+              In der Auflistung vorhandener WLANs werden die MAC Adressen der Gegenstelle (BSSID) angezeigt.<br>
+              Anzeige des Logs verbessert.<br>
+              Zählersyncronisation verbessert.<br>
+              ThingSpeak Upload prüft vor dem Senden, ob überhaupt eine Netzwerkverbindung besteht.<br>
+              Zur besseren Fehleranalyse werden mehr Exceptioninformationen gespeichert<br>
+              <br>
               <h3>Version 1.5.5</h3>
               Im AP-Modus (wenn Jumper gesetzt), werden außer dem Leser und dem Webserver keine zusätzlichen Dienste gestartet. Es werden auch keine Konfigurationen gelesen.<br>
               Dies soll verhindern, dass durch Fehlkonfigurationen, der Leser in einer Dauer-Reboot-Schleife hängt und nicht mehr über Webinterface konfigurierbar ist.<br>
