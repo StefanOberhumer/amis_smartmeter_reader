@@ -8,7 +8,6 @@
 #include "AmisReader.h"
 #include "Application.h"
 #include "Exception.h"
-#include "FileBlob.h"
 #include "LedSingle.h"
 #include "Log.h"
 #define LOGMODULE   LOGMODULE_BIT_SYSTEM
@@ -134,12 +133,6 @@ void setup() {
     // im Mqtt.init() wird die mqtt-config geladen
     Mqtt.init();
 
-    // Extraktion der Files für den Webserver vorbereiten
-    // Alle Dateien zu extrahieren dauert zu lange (HardwareWatchdok wir d ausgelöst)
-    // Deswegen passiert die eigentlich extraktion dann erst in der loop()
-    FileBlobs.init();
-    FileBlobs.checkIsChanged();
-
     // Starten wir mal den AMIS-Reader
     AmisReader.init(AMISREADER_SERIAL_NO);  // Init mit Serieller Schnittstellennummer
     AmisReader.enable(); // und gleich enablen
@@ -158,9 +151,7 @@ void setup() {
 
     // Webserver ... damit wir auch was machen können
     Webserver.init();    // Unter "/"" wird die "/index.html" ausgeliefert, "/update" ist eine statische fixe Seite
-
     Webserver.setCredentials(Config.use_auth, Config.auth_user, Config.auth_passwd);
-    Webserver.setTryGzipFirst(Config.webserverTryGzipFirst); // webserverTryGzipFirst sollte hier true sein (lesen wir nicht aus der config)
 
     // Smart Meter Simulator
     ModbusSmartmeterEmulation.init();
@@ -224,8 +215,6 @@ void loop() {
         dbg_string="";
     }
 #endif
-
-    FileBlobs.loop();
 
     Reboot.loop();
 
