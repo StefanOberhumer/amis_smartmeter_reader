@@ -10,7 +10,7 @@
 #include "Exception.h"
 #include "LedSingle.h"
 #include "Log.h"
-#define LOGMODULE   LOGMODULE_BIT_SYSTEM
+#define LOGMODULE   LOGMODULE_SYSTEM
 #include "ModbusSmartmeterEmulation.h"
 #include "Mqtt.h"
 #include "Network.h"
@@ -100,8 +100,7 @@ void setup() {
 
     // Init logging
     Log.init("eventlog.json");
-    Log.setModules(LOGMODULE_BIT_ALL);
-    Log.setLoglevel(LOGLEVEL_INFO);
+    Log.setLoglevel(LOGLEVEL_INFO, LOGMODULE_ALL);
 
     // Log some booting information
     DOLOG_IP("System starting...");
@@ -127,7 +126,7 @@ void setup() {
     Config.loadConfigGeneral();
 
     if (!Config.log_sys) {
-        Log.setLoglevel(LOGLEVEL_NONE);
+        Log.setLoglevel(LOGLEVEL_NONE, LOGMODULE_ALL);
     }
 
     // im Mqtt.init() wird die mqtt-config geladen
