@@ -141,7 +141,17 @@ void setup() {
 
     Config.applySettingsConfigGeneral();
 
-  // Start Network
+    // Developer: Enable verbose logging on some modules
+#if 0
+    Log.setLoglevel(LOGLEVEL_VERBOSE, LOGMODULE_AMISREADER);
+    Log.setLoglevel(LOGLEVEL_VERBOSE, LOGMODULE_MODBUS);
+    Log.setLoglevel(LOGLEVEL_VERBOSE, LOGMODULE_MQTT);
+    Log.setLoglevel(LOGLEVEL_VERBOSE, LOGMODULE_THINGSPEAK);
+    Log.setLoglevel(LOGLEVEL_VERBOSE, LOGMODULE_WATCHDOGPING);
+    Log.setLoglevel(LOGLEVEL_VERBOSE, LOGMODULE_REMOTEONOFF);
+#endif
+
+    // Start Network
     Network.init(Application.inAPMode());
     NetworkConfigWifi_t networkConfigWifi = Network.getConfigWifi();
     Network.connect();
@@ -157,7 +167,7 @@ void setup() {
     ModbusSmartmeterEmulation.init();
     if (Config.smart_mtr) {
         ModbusSmartmeterEmulation.enable();
-        LOG_VP("ModbusSmartmeterEmulation enabled");
+        LOG_DP("ModbusSmartmeterEmulation enabled");
     }
 
     // initiate ping watchdog
@@ -165,7 +175,7 @@ void setup() {
     WatchdogPing.config(networkConfigWifi.pingrestart_ip, networkConfigWifi.pingrestart_interval, networkConfigWifi.pingrestart_max);
     if (networkConfigWifi.pingrestart_do) {
         WatchdogPing.enable();
-        LOG_VP("WatchdogPing enabled");
+        LOG_DP("WatchdogPing enabled");
     }
 
     // Netzwerksteckdose (On/Off via Netzwerk)
@@ -184,14 +194,14 @@ void setup() {
     RebootAtMidnight.config();
     if (Config.reboot0) {
         RebootAtMidnight.enable();
-        LOG_VP("RebootAtMidnight enabled");
+        LOG_DP("RebootAtMidnight enabled");
     }
 
     secTicker.attach_scheduled(1, secTick);
 
-    LOG_IP("System setup completed, running");
-
     SYSTEMMONITOR_STAT();
+
+    LOG_IP("System setup completed, running");
 }
 
 void loop() {
@@ -230,6 +240,7 @@ void loop() {
     Log.loop(); // Eine Seite des Logfiles an einen Websocket client senden
 
     LedBlue.loop();
+
     WatchdogPing.loop();
 
     MDNS.update();
@@ -242,6 +253,7 @@ void loop() {
         Serial.flush();
         doSerialHwTest = false;
     }
+
     SYSTEMMONITOR_STAT();
 }
 
