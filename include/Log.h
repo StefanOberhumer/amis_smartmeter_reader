@@ -54,7 +54,7 @@ Current state:
 #define LOGMODULE_WEBSSOCKET        0x0a
 #define LOGMODULE_WATCHDOGPING      0x0b
 #define LOGMODULE_REMOTEONOFF       0x0c
-#define LOGMODULE_LAST              0x0c
+#define LOGMODULE_LAST              0x0c // If added one: Do not forget to adapt _getModuleName()
 #define LOGMODULE_ALL               0xff
 
 // Log-Types (info/warning/error/debug/verbose)
