@@ -106,7 +106,7 @@ static void setTime(AmisReaderNumResult_t &result) {
     ti.tv_sec = mktime(&result.time);
     tv_sec_old = time(NULL);
     if (ti.tv_sec == tv_sec_old) {
-        LOGF_DP("Time already in sync");
+        LOG_DP("Time already in sync");
         return; // skip if we're already in sync!
     }
     // Transfer of enryptedMBUSTelegram_SND_UD (101 bytes) needs ~105ms at 9600 8N1
@@ -473,7 +473,7 @@ void AmisReaderClass::end()
 void AmisReaderClass::processStateSerialnumber(const uint32_t msNow)
 {
     if (_state == initReadSerial) {
-        LOGF_DP("Initalizing reading serialnumber");
+        LOG_DP("Initalizing reading serialnumber");
         _baudRateIdentifier = 0; _serialNumber[0] = 0;
 
         if (_readSerialNumberMode == disabled ) {
@@ -500,7 +500,7 @@ void AmisReaderClass::processStateSerialnumber(const uint32_t msNow)
         // siehe AMIS TD-351x Benutzerhandbuch
         _serialReadBufferIdx = 0;
         clearSerialRx();
-        LOGF_DP("Requesting serialnumber");
+        LOG_DP("Requesting serialnumber");
         serialWrite("/?!\r\n");
         // vor dem nächsten Senden muss zwischen 1500 und 2200ms gewartet werden
         // Übertragen der Gerätenummer dauert etwa 1200ms
@@ -539,7 +539,7 @@ void AmisReaderClass::processStateSerialnumber(const uint32_t msNow)
                 } else {
                     // das scheint ungültig zu sein ... alles wegwerfen und nochmals probieren
                     _state = requestReaderSerial;
-                    LOGF_WP("Serialnumber invalid response #1");
+                    LOG_WP("Serialnumber invalid response #1");
                 }
                 return;
             }
@@ -547,7 +547,7 @@ void AmisReaderClass::processStateSerialnumber(const uint32_t msNow)
             if (_serialReadBufferIdx >= 4 + AMISREADER_MAX_SERIALNUMER + 2) {
                 // das wäre eine ganze Serialnummer gewesen ... alles wegwerfen und nochmals probieren
                 _state = requestReaderSerial;
-                LOGF_WP("Serialnumber invalid response #2");
+                LOG_WP("Serialnumber invalid response #2");
             }
         }
     }
@@ -596,7 +596,7 @@ void AmisReaderClass::moveSerialBufferToDecodingWorkBuffer(size_t n)
 void AmisReaderClass::processStateCounters(const uint32_t msNow)
 {
     if (_state == initReadCounters) {
-        LOGF_DP("Initalizing reading counter values");
+        LOG_DP("Initalizing reading counter values");
         if (_serial) {
             _serial->begin(9600, SERIAL_8E1); /* Zählerdaten kommen angeblich mit 9600 8E1 */
             _serial->setTimeout(5);           // eigentlich prüfen wir ja mit available() ... aber vorsichtshalber
@@ -625,7 +625,7 @@ void AmisReaderClass::processStateCounters(const uint32_t msNow)
                     // was it message "<DLE>@ð0<SYN> ??  (= SND_NKE)
                     //MsgOut.writeTimestamp();
                     //MsgOut.println("Received SND_NKE");
-                    LOGF_DP("Received SND_NKE");
+                    LOG_DP("Received SND_NKE");
                     serialWrite(0xe5); // send ACK
                     for(size_t i=5; i<_serialReadBufferIdx; i++) {
                         _serialReadBuffer[i-5] = _serialReadBuffer[i];
@@ -660,7 +660,7 @@ void AmisReaderClass::processStateCounters(const uint32_t msNow)
         if (_serialReadBufferIdx >= _bytesInBufferExpectd) {
             serialWrite(0xe5); // the receifed datas must be confirmed
 
-            LOGF_DP("Got expected bytes");
+            LOG_DP("Got expected bytes");
 
             moveSerialBufferToDecodingWorkBuffer(_bytesInBufferExpectd);
             _bytesInBufferExpectd = 0;
@@ -712,7 +712,7 @@ void AmisReaderClass::processStateCounters(const uint32_t msNow)
 
             if (!_readerIsOnline || msNow - _lastTimeSync > 1800000u ) {
                 if (!_readerIsOnline) {
-                    LOGF_IP("Data synced with counter");
+                    LOG_IP("Data synced with counter");
                     _readerIsOnline = true;
                 }
                 // Sync time afer sync with reader or each 30 minutes avoid internal clock drift
@@ -780,7 +780,7 @@ void AmisReaderClass::loop()
         LOGF_DP("Timeout occured! state=%d", (int)_state);
 
         if (_readerIsOnline) {
-            LOGF_IP("Sync lost ... starting resync.");
+            LOG_IP("Sync lost ... starting resync.");
         }
         _readerIsOnline = false;
         valid = 0;
