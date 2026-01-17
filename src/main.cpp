@@ -32,9 +32,6 @@ extern const char *__COMPILED_GIT_BRANCH__;
     WiFiServer dbg_server(10000);
     WiFiClient dbg_client;
 #endif
-#ifdef STROMPREIS
-String strompreis="";
-#endif // strompreis
 
 
 extern void historyInit();
