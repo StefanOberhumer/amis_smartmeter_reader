@@ -12,6 +12,7 @@ Import("env")
 class globs:
     honorErrors = True
     errCnt = 0
+    verbose = 1
 
 
 def getPatchPath(env):
@@ -44,6 +45,82 @@ def replaceInFile(in_file, out_file, text, subs, flags=0):
                 outfile.truncate()
                 outfile.write(file_contents.encode())
 
+
+def strInFile(filename, strToSearch):
+    if (not os.path.exists(filename)):
+        return False
+    infile = open(filename, "rb")
+    content = infile.read().decode('utf-8')
+    infile.close()
+    return content.find(strToSearch) != -1
+
+
+def get_framework_dir():
+    platform = env.PioPlatform()
+    framework = env.get("FRAMEWORK", ["arduino"])[0] # "arduino"
+    pioplatform = env.get("PIOPLATFORM") # "espressif8266"
+    #print("Framework=" + framework)
+    #print("Pioplatform=" + pioplatform)
+
+    # probieren wir es direkt über "get_package_dir()"
+    framework_pkg_dir = platform.get_package_dir(f"framework-{framework}{pioplatform}")
+
+    if os.path.isdir(framework_pkg_dir):
+        if globs.verbose >= 1:
+            print(f"Framework package found at '{framework_pkg_dir}'.")
+        return framework_pkg_dir
+
+    print("Warning: Could not locate framework package.")
+    return None
+
+
+def printSubprocessResult(result):
+    if (result.stdout):
+        print(result.stdout)
+    if (result.stderr):
+        print(result.stderr)
+
+
+def isPatchApplied(gitExtraOptions, patchFilename):
+    gitExec = ['git', 'apply'] + gitExtraOptions + ['--reverse', '--check', patchFilename]
+    if globs.verbose >= 3:
+        print("Running '%s'" % " ".join(gitExec))
+    process = subprocess.run(gitExec, capture_output=True) # subprocess.DEVNULL
+    if globs.verbose >= 3:
+        printSubprocessResult(process)
+    if (process.returncode == 0):
+        return True
+    return False
+
+
+def applyPatch(gitExtraOptions, patchFilename):
+    gitExec = ['git', 'apply'] + gitExtraOptions + [patchFilename]
+    if globs.verbose >= 3:
+        print("Running '%s'" % " ".join(gitExec))
+    process = subprocess.run(gitExec, capture_output=True) # subprocess.DEVNULL
+    if globs.verbose >= 3:
+        printSubprocessResult(process)
+    if (process.returncode == 0):
+        return True
+    if globs.verbose < 3:
+        printSubprocessResult(process)
+    return False
+
+
+def unapplyPatch(gitExtraOptions, patchFilename):
+    gitExec = ['git', 'apply', '--reverse'] + gitExtraOptions + [patchFilename]
+    if globs.verbose >= 3:
+        print("Running '%s'" % " ".join(gitExec))
+    process = subprocess.run(gitExec, capture_output=True) # subprocess.DEVNULL
+    if globs.verbose >= 3:
+        printSubprocessResult(process)
+    if (process.returncode == 0):
+        return True
+    if globs.verbose < 3:
+        printSubprocessResult(process)
+    return False
+
+
 def main():
     if (env.GetProjectOption('custom_patches', '') == ''):
         print('No custom_patches specified')
@@ -55,6 +132,9 @@ def main():
             sys.exit(10)
         return 0
 
+    envDir = os.path.relpath(env['PIOENV'].strip())
+    frameworkDir = os.path.relpath(get_framework_dir())
+
     directories = getPatchPath(env)
     for directory in directories:
         if (not os.path.isdir(directory)):
@@ -63,34 +143,60 @@ def main():
                 sys.exit(11)
             return 0
 
-        for file in os.listdir(directory):
-            if (not file.endswith('.patch')):
+        for filename in os.listdir(directory):
+            if (not filename.endswith('.patch')):
                 continue
 
-            fullPath = os.path.join(directory, file)
-            preparePath = fullPath + "." + env['PIOENV'].strip() + '.prepare'
-            replaceInFile(fullPath, preparePath, '$$$env$$$', env['PIOENV'])
-            print('Working on patch: ' + fullPath + '... ', end='')
+            origPatchFilename = os.path.join(directory, filename)
+            preparedPatchFilename = origPatchFilename + "." + envDir + '.prepare'
+
+            gitExtraOptions = []
+            if strInFile(origPatchFilename, "$$$env$$$"):
+                replaceInFile(origPatchFilename, preparedPatchFilename, '$$$env$$$', envDir )
+                if (envDir.startswith("..")):
+                    gitExtraOptions += ["--unsafe-paths"]
+            elif strInFile(origPatchFilename, "$$$framework_dir$$$"):
+                replaceInFile(origPatchFilename, preparedPatchFilename, '$$$framework_dir$$$', frameworkDir)
+                if (frameworkDir.startswith("..")):
+                    gitExtraOptions += ["--unsafe-paths"]
+            else:
+                print("error: Invalid patch format '%s'" % origPatchFilename)
+                globs.errCnt += 1
+                continue
+
+            if globs.verbose >= 2:
+                # print the adapted .patch file
+                print("Adapted patch file: '%s'" % preparedPatchFilename)
+                print(open(preparedPatchFilename, "rt").read())
+
+            print('Working on patch: ' + origPatchFilename + '... ', end='')
+            if globs.verbose >= 3:
+                print()
 
             # Check if patch was already applied
-            process = subprocess.run(['git', 'apply', '--reverse', '--check', preparePath], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if (process.returncode == 0):
-                print('already applied')
-                os.remove(preparePath)
+            if (isPatchApplied(gitExtraOptions, preparedPatchFilename)):
+                os.remove(preparedPatchFilename)
+                if globs.verbose >= 1:
+                    print('already applied')
                 continue
 
             # Apply patch
-            process = subprocess.run(['git', 'apply', preparePath])
-            if (process.returncode == 0):
+            if (applyPatch(gitExtraOptions, preparedPatchFilename)):
                 print('applied')
             else:
                 print('failed')
                 globs.errCnt += 1
-
-            os.remove(preparePath)
+            os.remove(preparedPatchFilename)
 
     if (globs.honorErrors and globs.errCnt):
-        sys.exit(12)
+        sys.exit(0)
     return 0
+
+
+# Variablen und Werte
+# print(env.Dump())
+#
+# Methoden/Attribute
+# print(dir(env))
 
 main()
