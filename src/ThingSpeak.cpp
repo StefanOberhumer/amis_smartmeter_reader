@@ -5,12 +5,15 @@
 #include "Network.h"
 #include "Utils.h"
 
+#define THINGSPEAK_LOG_MAX_CONNECTION_ATTEMPS   3
+
 void ThingSpeakClass::init()
 {
     _enabled = false;
     _lastSentMs = 0;
     _intervalMs = 30000;
     _lastResult = "ThingSpeak deaktiviert.";
+    _continuousConnectionErrors = 0;
 }
 
 void ThingSpeakClass::enable()
@@ -36,6 +39,8 @@ void ThingSpeakClass::enable()
     } else {
         _lastSentMs = now - _intervalMs; // run as soon as we got valid data
     }
+
+    _continuousConnectionErrors = 0;
 }
 
 void ThingSpeakClass::disable()
@@ -153,7 +158,14 @@ void ThingSpeakClass::sendData()
     if (!_client.connect("api.thingspeak.com", 80)) {
         //_lastResult = F("Connecting http://api.thingspeak.com failed.");
         _lastResult = F("Verbindung zu http://api.thingspeak.com fehlgeschlagen.");
-        LOG_EP("Connecting 'api.thingspeak.com' failed.");
+
+        _continuousConnectionErrors++;
+        if (_continuousConnectionErrors <= THINGSPEAK_LOG_MAX_CONNECTION_ATTEMPS) {
+            LOG_EP("Connecting 'api.thingspeak.com' failed.");
+        }
+        if (_continuousConnectionErrors == THINGSPEAK_LOG_MAX_CONNECTION_ATTEMPS) {
+            LOGF_WP("%u continuous connection errors. Stopping logging failures on thingspeak upload.", _continuousConnectionErrors);
+        }
         return;
     }
     LOG_DP("Connected to 'api.thingspeak.com'.");
