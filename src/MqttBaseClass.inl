@@ -3,12 +3,15 @@
 //    *  MqttHAClass            handling
 //    *  MqttReaderDataClass
 
+#define MQTT_LOG_MAX_CONNECTION_ATTEMPS         3
+
 void MqttBaseClass::init()
 {
     _mqttReaderData.init(this);
     _mqttHA.init(this);
     loadConfigMqtt(_config);
     _reloadConfigState = 0;
+    _continuousConnectionErrors = 0;
 }
 
 
@@ -71,6 +74,8 @@ void MqttBaseClass::onConnect(bool sessionPresent)
 {
     UNUSED_ARG(sessionPresent);
 
+    _continuousConnectionErrors = 0;
+
     _reconnectTicker.detach();
     _actionTicker.detach();
     if (!_config.mqtt_enabled) {
@@ -109,7 +114,9 @@ void MqttBaseClass::doConnect()
 
         IPAddress ip;
         if (!WiFi.hostByName(_config.mqtt_broker.c_str(), ip, 1000) || !ip.isSet()) {
-            LOGF_EP("Could not get IPNumber for '%s'.", _config.mqtt_broker.c_str());
+            if (_continuousConnectionErrors < MQTT_LOG_MAX_CONNECTION_ATTEMPS) {
+                LOGF_EP("Could not get IPNumber for '%s'.", _config.mqtt_broker.c_str());
+            }
             _reconnectTicker.once_scheduled(5, std::bind(&MqttBaseClass::doConnect, this));
             return;
         }
@@ -136,12 +143,14 @@ void MqttBaseClass::doConnect()
         LOGF_DP("setClientId: %s", _config.mqtt_client_id.c_str());
     }
 
-    if (_brokerByIPAddr) {
-        LOGF_IP("Connecting to server %s:%" PRIu16 "...", _config.mqtt_broker.c_str(), _config.mqtt_port);
-    } else {
-        LOGF_IP("Connecting to server %s:%" PRIu16 " [" PRsIP ":%d]...",
-                _config.mqtt_broker.c_str(), _config.mqtt_port,
-                PRIPVal(_brokerIp), _config.mqtt_port);
+    if (_continuousConnectionErrors < MQTT_LOG_MAX_CONNECTION_ATTEMPS) {
+        if (_brokerByIPAddr) {
+            LOGF_IP("Connecting to server %s:%" PRIu16 "...", _config.mqtt_broker.c_str(), _config.mqtt_port);
+        } else {
+            LOGF_IP("Connecting to server %s:%" PRIu16 " [" PRsIP ":%d]...",
+                    _config.mqtt_broker.c_str(), _config.mqtt_port,
+                    PRIPVal(_brokerIp), _config.mqtt_port);
+        }
     }
     _mqttClient.connect();
 }
@@ -164,6 +173,11 @@ void MqttBaseClass::onDisconnect(AsyncMqttClientDisconnectReason reason) {
 
     if (_reloadConfigState == 0 && Network.isConnected()) {
         _reconnectTicker.once_scheduled(2, std::bind(&MqttBaseClass::doConnect, this));
+    }
+
+    _continuousConnectionErrors++;
+    if (_continuousConnectionErrors > MQTT_LOG_MAX_CONNECTION_ATTEMPS) {
+        return;
     }
 
     const char *reasonstr;
@@ -197,6 +211,10 @@ void MqttBaseClass::onDisconnect(AsyncMqttClientDisconnectReason reason) {
         break;
     }
     LOGF_WP("Disconnected from server " PRsIP ":%" PRIu16 " reason=%S", PRIPVal(_brokerIp), _config.mqtt_port, reasonstr);
+
+    if (_continuousConnectionErrors == MQTT_LOG_MAX_CONNECTION_ATTEMPS) {
+        LOGF_WP("%u continuous connection errors. Stopping logging failures on MQTT connection attemps.", _continuousConnectionErrors);
+    }
 }
 
 
@@ -236,12 +254,11 @@ void MqttBaseClass::reloadConfig() {
         _reloadConfigState = 3;
         LOG_IP("Config reloaded.");
     }  else if (_reloadConfigState == 3) {
-        // finished ... try reconnecting if enabled
+        // finished ... try reconnecting
         _actionTicker.detach();
         _reloadConfigState = 0;
-        if (Network.isConnected()) {
-            doConnect();
-        }
+        _continuousConnectionErrors = 0;
+        doConnect();
     }
 }
 
