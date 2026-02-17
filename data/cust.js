@@ -305,6 +305,14 @@ function updateElements(obj) {
       // nothing to do as 'key' matches the 'name' of the div element
     }
     */
+    else if (key==='heap' || key==='maxfreeblock' || key==='stack0' || key==='stack1' || key==='stack2') {
+      let prefix = key;
+      let data = obj[key];
+      for (let [key, value] of Object.entries(data)) {
+        updateHTMLPageContent(prefix + "_" + key, "" + value);
+      }
+      continue;
+    }
     else if (key==='today_in') {   // Nur 1x nach dem Start
       let secsDayStart = secsSinceMidnight(g_lastDT);
       yestd_in=obj.yestd_in;
