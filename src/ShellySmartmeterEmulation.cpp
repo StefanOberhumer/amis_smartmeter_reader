@@ -140,11 +140,14 @@ void ShellySmartmeterEmulationClass::handleRequest(AsyncUDPPacket udpPacket) {
     JsonObject result = responseJson.createNestedObject("result");
 
     //the B2500 is VEEEERY picky... needs "float" formatted value with a dot
-    String saldo = String(_currentValues.saldo + _offset) + ".0";
+    char saldo[14]; // MIN_INT + ".0\0"
+    snprintf(saldo, sizeof(saldo), "%d.0", _currentValues.saldo + _offset);
     if (!strcmp(method, "EM.GetStatus")) {
-        result["a_act_power"] = serialized(saldo);
-        result["b_act_power"] = serialized("0.0");
-        result["c_act_power"] = serialized("0.0");
+        char saldo_3[14]; // 1 decimals
+        snprintf(saldo_3, sizeof(saldo_3), "%.1f", ((float)(_currentValues.saldo + _offset)) / 3);
+        result["a_act_power"] = serialized(saldo_3);
+        result["b_act_power"] = result["a_act_power"];
+        result["c_act_power"] = result["a_act_power"];
         result["total_act_power"] = serialized(saldo);
     } else if (!strcmp(method, "EM1.GetStatus")) {
         result["act_power"] = serialized(saldo);
