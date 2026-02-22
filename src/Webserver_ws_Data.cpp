@@ -434,6 +434,10 @@ void WebserverWsDataClass::wsClientRequest(AsyncWebSocketClient *client, char* r
         if (client) {
             sendStatus(client);
         }
+    } else if (strcmp(command, "getAppInfo") == 0) {
+        if (client) {
+            ws->text(client->id(), getStatusJsonInfoApp());
+        }
     } else if (strcmp(command, "restart") == 0) {
         Reboot.startReboot();
     } else if (strcmp(command, "softreset") == 0) {

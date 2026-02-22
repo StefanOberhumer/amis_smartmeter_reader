@@ -82,6 +82,8 @@ public:
 
     bool developerModeEnabled;
 
+    // bool firmwareUpdateCheck; // firmwareUpdateCheck not needed by the reader itself
+
 private:
     void loadConfigGeneralMinimal();
 };

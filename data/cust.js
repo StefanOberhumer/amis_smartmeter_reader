@@ -45,6 +45,7 @@ var config_general = {
     "switch_url_on": "",
     "switch_url_off": "",
     "switch_intervall": 60,
+    "firmwareUpdateCheck": false,
     "command": "/config_general"
 };
 
@@ -94,6 +95,161 @@ function filenameIsValidFirmware(filename) {
 function filenameIsValidLittleFS(filename) {
     return filename.startsWith("littlefs");
 }
+
+var Application = {
+  currentVersion: splitVersion(""),
+}
+
+var githubReleaseInfo = {
+  checkDone: false,
+  checkSuccess: false,
+  newVersionCompare: 0, // wenn > 0: dann ist eine neuere Version verfügbar, wenn < 0 es ist eine ältere version verfügbar
+  latestVersion: splitVersion(""),
+  download_site: "",
+  file_download_url : ""
+};
+
+
+function compareVersion(v1, v2) {
+  if (v1.major > v2.major) return 1;
+  if (v1.major < v2.major) return -1;
+  if (v1.minor > v2.minor) return 1;
+  if (v1.minor < v2.minor) return -1;
+  if (v1.patch > v2.patch) return 1;
+  if (v1.patch < v2.patch) return -1;
+  if (v1.prerelease > v2.prerelease) return 1;
+  if (v1.prerelease < v2.prerelease) return -1;
+  return 0;
+}
+
+function splitVersion(version) {
+  //const version = "v1.5.9-dev7";
+  const versionRegex = /^v?(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9.]+))?$/;
+  const match = version.match(versionRegex);
+
+  if (match) {
+      const [full, major, minor, patch, prerelease] = match;
+
+      /*
+      console.log("Full Version: ", full);       // "v1.5.9-dev7"
+      console.log("Major:        ", major);      // "1"
+      console.log("Minor:        ", minor);      // "5"
+      console.log("Patch:        ", patch);      // "9"
+      console.log("Pre-release:  ", prerelease); // "dev7" (oder undefined, falls fehlt)
+      */
+     return {major:parseInt(major), minor:parseInt(minor), patch:parseInt(patch), prerelease:prerelease, versionStr:version}
+  } else {
+      //console.log(`Ungültiges Versionsformat '${version}'`);
+      return {major:0, minor:0, patch:0, prerelease:"", versionStr:version };
+  }
+}
+
+/**
+ * Check for new version on GitHub Releases
+ * @param {string} repo - "Username/Projectname"
+ * @param {version} currentVersion - Current version
+ */
+var newVersionCheckDone = false;
+async function checkForUpdate(forceCheck, repo, currentVersion) {
+  // Documentation: https://docs.github.com/rest
+  // https://api.github.com/repos/${repo}/compare/v1.5.8...master
+    const url = `https://api.github.com/repos/${repo}/releases/latest`;
+
+    if (!forceCheck && githubReleaseInfo.checkDone) {
+      return;
+    }
+    githubReleaseInfo.checkDone = true;
+    githubReleaseInfo.checkSuccess = false;
+
+    try {
+        const response = await fetch(url);
+        /*
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                // GitHub möchte manchmal explizit den Accept-Header sehen
+                "Accept": "application/vnd.github+json"
+            },
+            mode: "cors" // Erzwingt den CORS-Modus
+        });
+        */
+
+        if (!response.ok) {
+            throw new Error(`GitHub API Fehler: ${response.status}`);
+        }
+
+        const data = await response.json();
+        githubReleaseInfo.latestVersion = splitVersion(data.tag_name)
+        githubReleaseInfo.download_site = data.html_url;
+        githubReleaseInfo.file_download_url = "";
+        for (let [key, value] of Object.entries(data.assets)) {
+          if (value.name !== 'firmware-amis-esp12e.bin') {
+            continue;
+          }
+          githubReleaseInfo.file_download_url = value.browser_download_url;
+          break;
+        }
+
+        // Vergleichen wir mal
+        githubReleaseInfo.newVersionCompare = compareVersion(githubReleaseInfo.latestVersion, currentVersion);
+        if (githubReleaseInfo.newVersionCompare > 0) {
+            console.log(`🚀 Neue Firmware verfügbar: ${githubReleaseInfo.latestVersion.versionStr}`);
+            console.log(`Download Seite: ${githubReleaseInfo.download_site}`);
+            console.log(`Direkter Download: ${githubReleaseInfo.file_download_url}`);
+            githubReleaseInfo.checkSuccess = true;
+            return true;
+        } else if (githubReleaseInfo.newVersionCompare < 0) {
+            console.log(`🚀 Nur ältere Firmware verfügbar: ${githubReleaseInfo.latestVersion.versionStr}`);
+            console.log(`Download Seite: ${githubReleaseInfo.download_site}`);
+            console.log(`Direkter Download: ${githubReleaseInfo.file_download_url}`);
+            githubReleaseInfo.checkSuccess = true;
+            return true;
+        } else {
+            console.log(`✅ Du bist auf dem neuesten Stand. ${currentVersion.versionStr}`);
+            console.log(`Download Seite: ${githubReleaseInfo.download_site}`);
+            console.log(`Direkter Download: ${githubReleaseInfo.file_download_url}`);
+            githubReleaseInfo.checkSuccess = true;
+            return false;
+        }
+    } catch (error) {
+        console.error("Fehler beim Update-Check:", error);
+    }
+}
+
+/*
+async function downloadFirmware(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Download fehlgeschlagen');
+  return await response.blob(); // Lädt die Daten als binäres Blob-Objekt
+}
+
+function uploadToDevice(blob, deviceUrl) {
+  const xhr = new XMLHttpRequest();
+
+  // Fortschrittsbalken-Logik
+  xhr.upload.onprogress = (event) => {
+    if (event.lengthComputable) {
+      const percent = (event.loaded / event.total) * 100;
+      console.log(`Upload-Status: ${percent.toFixed(2)}%`);
+    }
+  };
+
+  xhr.onload = () => {
+    if (xhr.status === 200) console.log("Firmware erfolgreich übertragen!");
+    else console.error("Fehler beim Gerät:", xhr.statusText);
+  };
+
+  xhr.open("POST", deviceUrl, true);
+  // Sende den Blob direkt als binären Body
+  xhr.send(blob);
+}
+
+function directFirmwareUpdate(githuburl, deviceupgradeurl) {
+  downloadFirmware(githuburl)
+  .then(blob => uploadToDevice(blob, deviceupgradeurl))
+  .catch(err => console.error("Prozess abgebrochen:", err));
+}
+*/
 
 function toNumberString(value, numberOfDecimals) {
     return value.toFixed(numberOfDecimals).replace('.',',');
@@ -400,6 +556,19 @@ function updateElements(obj) {
         }
       }
     }
+    else if (key === 'version') {
+      Application.currentVersion = splitVersion(value);
+      if (config_general.firmwareUpdateCheck && Application.currentVersion.major != 0) {
+        checkForUpdate(false, 'mgerhard74/amis_smartmeter_reader', Application.currentVersion);
+      }
+    }
+    else if (key === 'firmwareUpdateCheck') {
+      config_general.firmwareUpdateCheck = value;
+      if (config_general.firmwareUpdateCheck && Application.currentVersion.major != 0) {
+        checkForUpdate(false, 'mgerhard74/amis_smartmeter_reader', Application.currentVersion);
+      }
+    }
+
     else if (key==='page') {             // Logpanel
       logpage = obj["page"];
       logpages = obj["pages"];
@@ -649,6 +818,7 @@ function connectWS() {
     setTimeout( function(){
       websock.send('{"command":"energieMonth","jahr":22}');
     },2500);
+      websock.send('{"command":"getAppInfo"}');
     //console.log("connectws")
     ws_pingpong = setInterval(function() {
       websock.send('{"command":"ping"}');
@@ -975,6 +1145,17 @@ function authDetails() {  // display settings only if auth active
   else $(".auth_details").hide();
 }
 
+function firmwareUpdateCheck() {
+  if ($(this).prop('checked')) {
+    config_general.firmwareUpdateCheck = true;
+  } else {
+    config_general.firmwareUpdateCheck = false;
+  }
+  if (config_general.firmwareUpdateCheck && Application.currentVersion.major != 0) {
+    checkForUpdate(false, 'mgerhard74/amis_smartmeter_reader', Application.currentVersion);
+  }
+}
+
 function developerModeEnabled() {  // display settings only if auth active
   if ($(this).prop('checked')) {
     $(".menu-developer").show();
@@ -1284,6 +1465,7 @@ $(function() {            // main
   $("input[name='mqtt_enabled']").on("click", mqttDetails);
   $("input[name='dhcp']").on("click", wifiDetails);
   $("input[name='thingspeak_aktiv']").on("click", thingsDetails);
+  $("input[name='firmwareUpdateCheck']").on("click", firmwareUpdateCheck);
   $("input[name='developerModeEnabled']").on("click", developerModeEnabled);
   $("input[name='webUseFilesFromFirmware']").on("click", webUseFilesFromFirmware);
   //$("input[name='smart_aktiv']").on("click", smart_mtr);

@@ -208,6 +208,9 @@ void ConfigClass::loadConfigGeneral()
     switch_intervall = json[F("switch_intervall")].as<unsigned int>();
 
     developerModeEnabled = json[F("developerModeEnabled")].as<bool>();
+
+    // firmwareUpdateCheck not needed by the reader itself
+    // firmwareUpdateCheck = json[F("firmwareUpdateCheck")].as<bool>();
 }
 
 void ConfigClass::applySettingsConfigGeneral()
