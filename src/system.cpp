@@ -119,6 +119,10 @@ void energieMonthUpdate() // Monatstabelle Energie an alle WebSock-Webclients se
         return; // No Websock clients
     }
 
+    if (Databroker.valid != 5) {
+        return;
+    }
+
     bool isFirst = true;
     String buffer = "{ \"monthlist\": [";
     File f = LittleFS.open("/monate", "r");

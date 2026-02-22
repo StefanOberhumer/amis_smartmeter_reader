@@ -286,7 +286,7 @@ static void secTick() {
     // wird jede Sekunde aufgerufen
 
     if (ws->count()) {        // ws-connections
-        if (first_frame==0) {
+        if (Databroker.valid != 5) {
             sendZDataWait();
         }
     }

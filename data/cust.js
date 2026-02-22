@@ -7,6 +7,7 @@ var ws_pingpong;
 var logpage=1;
 var logpages;
 var e180,e280;
+var currentMonthData;
 var yestd_in=null;
 var yestd_out;
 var monthlist;
@@ -255,6 +256,10 @@ function toNumberString(value, numberOfDecimals) {
     return value.toFixed(numberOfDecimals).replace('.',',');
 }
 
+function toNumberString3f(value) {
+    return toNumberString(value, 3);
+}
+
 function UTCDate(d) {
     let r = new Date();
     r.setUTCMonth(1); // prevent any possible exception setting 29.02.XXXX
@@ -397,7 +402,7 @@ function setAvgItem(basitemname, totalValue, numberOfSeconds, setcolorNegPos) {
         if (totalValue > 0) $(fieldname).css({'color':'#FF0000'});
         else                $(fieldname).css({'color':'#0000FF'});
     }
-    $(fieldname).html("Ø " + toNumberString((totalValue * 3600) / numberOfSeconds / 1000, 3));
+    $(fieldname).html("Ø " + toNumberString3f((totalValue * 3600) / numberOfSeconds / 1000));
 }
 
 function updateElements(obj) {
@@ -486,22 +491,22 @@ function updateElements(obj) {
       let secsDayStart = secsSinceMidnight(g_lastDT);
       yestd_in=obj.yestd_in;
       yestd_out=obj.yestd_out;
-      $("#tdy_in"  ).html(toNumberString((value-yestd_in)/1000, 3));
+      $("#tdy_in"  ).html(toNumberString3f((value-yestd_in)/1000));
       setAvgItem("tdy_in", value-yestd_in, secsDayStart, false);
-      $("#tdy_out" ).html(toNumberString((obj.today_out-yestd_out)/1000, 3));
+      $("#tdy_out" ).html(toNumberString3f((obj.today_out-yestd_out)/1000));
       setAvgItem("tdy_out", obj.today_out-yestd_out, secsDayStart, false);
       var diff=(value-yestd_in)-(obj.today_out-yestd_out);
       if (diff >0) $("#tdy_diff").css({'color':'#FF0000'});
       else         $("#tdy_diff").css({'color':'#0000FF'});
-      $("#tdy_diff").html(toNumberString(diff / 1000, 3));
+      $("#tdy_diff").html(toNumberString3f(diff / 1000));
       setAvgItem("tdy_diff", diff, secsDayStart, true);
 
       if (diff >0) $("#perhour_tdy").css({'color':'#FF0000'});
       else         $("#perhour_tdy").css({'color':'#0000FF'});
       if (secsDayStart > 0) {
-        $("#perhour_tdy").html(toNumberString((diff * 3600) / secsDayStart / 1000, 3));
+        $("#perhour_tdy").html(toNumberString3f((diff * 3600) / secsDayStart / 1000));
       } else {
-        $("#perhour_tdy").html(toNumberString(diff / 1000, 3));
+        $("#perhour_tdy").html(toNumberString3f(diff / 1000));
       }
 
       for (let i=0;i<7;i++ ) {
@@ -512,19 +517,19 @@ function updateElements(obj) {
           datax = obj[datax];
           if (i === 0) $("#wd0").html('Gestern');
           else $("#wd"+i).html(wday[datax[0]]);
-          $("#wd_in" +i).html((datax[1] / 1000).toFixed(3).replace('.',','));
+          $("#wd_in" +i).html(toNumberString3f(datax[1] / 1000));
           setAvgItem("wd_in"+i, datax[1], secsDay, false);
-          $("#wd_out"+i).html((datax[2] / 1000).toFixed(3).replace('.',','));
+          $("#wd_out"+i).html(toNumberString3f(datax[2] / 1000));
           setAvgItem("wd_out"+i, datax[2], secsDay, false);
           diff=datax[1]-datax[2];
           if (diff >0) $("#wd_diff"+i).css({'color':'#FF0000'});
           else         $("#wd_diff"+i).css({'color':'#0000FF'});
-          $("#wd_diff"+i).html(toNumberString(diff / 1000, 3));
+          $("#wd_diff"+i).html(toNumberString3f(diff / 1000));
           setAvgItem("wd_diff"+i, diff, secsDay, true);
 
           if (diff >0) $("#perhour_"+i).css({'color':'#FF0000'});
           else         $("#perhour_"+i).css({'color':'#0000FF'});
-          $("#perhour_"+i).html(toNumberString((diff * 3600) / secsDay / 1000, 3));
+          $("#perhour_"+i).html(toNumberString3f((diff * 3600) / secsDay / 1000));
         }
       }
       continue;
@@ -533,21 +538,64 @@ function updateElements(obj) {
       diff=value-obj['2_7_0'];
       if (diff >0) $("#saldo").css({'color':'#FF0000'});
       else         $("#saldo").css({'color':'#0000FF'});
-      $("#saldo").html((diff / 1000).toFixed(3).replace('.',',')+' kW');
+      $("#saldo").html(toNumberString3f(diff / 1000) + ' kW');
     }
     else if (key==='1_8_0') {
-      if (e180 != value) {          // Energie-Tabelle auch aktualisieren
-        $("#tdy_in").html(((value-yestd_in) / 1000).toFixed(3).replace('.',','));
+      if (e180 != value) {          // Wochentag-Energie-Tabelle auch aktualisieren
+        $("#tdy_in").html(toNumberString3f((value-yestd_in) / 1000));
         e180=value;
+
+        if (typeof currentMonthData !== 'undefined') {
+          // Auch die Monatstabelle updaten !
+          let bzg = (e180 - currentMonthData.bezug) / 1000;
+          let lfg = (e280 - currentMonthData.lieferung) / 1000;
+          let diff = bzg - lfg;
+
+          $("#month_line_0_bezug").html(toNumberString3f(bzg));
+          $("#month_line_0_lfrg").html(toNumberString3f(lfg));
+          $("#month_line_0_diff").html(toNumberString3f(diff));
+          if (diff >0) $("#month_line_0_diff").css({'color':'#FF0000'});
+          else         $("#month_line_0_diff").css({'color':'#0000FF'});
+        }
       }
     }
     else if (key==='2_8_0') {
-      if (e280 != value) {          // Energie-Tabelle auch aktualisieren
-        $("#tdy_out").html(((value-yestd_out) / 1000).toFixed(3).replace('.',','));
+      if (e280 != value) { // Wochentag-Energie-Tabelle - aktueller Tag auch aktualisieren
+        $("#tdy_out").html(toNumberString3f((value-yestd_out) / 1000));
         e280 = value;
+
+        if (typeof currentMonthData !== 'undefined') {
+          // Auch die Monatstabelle updaten !
+          let bzg = (e180 - currentMonthData.bezug) / 1000;
+          let lfg = (e280 - currentMonthData.lieferung) / 1000;
+          let diff = bzg - lfg;
+
+          $("#month_line_0_bezug").html(toNumberString3f(bzg));
+          $("#month_line_0_lfrg").html(toNumberString3f(lfg));
+          $("#month_line_0_diff").html(toNumberString3f(diff));
+          if (diff >0) $("#month_line_0_diff").css({'color':'#FF0000'});
+          else         $("#month_line_0_diff").css({'color':'#0000FF'});
+        }
       }
-      $("#tdy_diff").html((((e180-yestd_in)-(e280-yestd_out)) / 1000).toFixed(3).replace('.',','));
+
+      let secsDayStart = secsSinceMidnight(g_lastDT);
+      var diff=(e180-yestd_in)-(e280-yestd_out);
+      if (diff >0) $("#tdy_diff").css({'color':'#FF0000'});
+      else         $("#tdy_diff").css({'color':'#0000FF'});
+      $("#tdy_diff").html(toNumberString(diff / 1000, 3));
+      setAvgItem("tdy_diff", diff, secsDayStart, true);
+      if (diff >0) $("#perhour_tdy").css({'color':'#FF0000'});
+      else         $("#perhour_tdy").css({'color':'#0000FF'});
+      if (secsDayStart > 0) {
+        $("#perhour_tdy").html(toNumberString3f((diff * 3600) / secsDayStart / 1000));
+      } else {
+        $("#perhour_tdy").html(toNumberString3f(diff / 1000));
+      }
+
+      $("#tdy_diff").html(toNumberString3f(((e180-yestd_in)-(e280-yestd_out)) / 1000));
+
     }
+
     else if (key==='things_up') {
       if (value) {
         let v = Number("0x" + value) | 0;
@@ -641,12 +689,13 @@ function updateElements(obj) {
     }
     else if (key==='monthlist') {
       monthlist={command:"monthlist",month:value};
-      if (yestd_in===null) continue;
+      //if (yestd_in===null) continue;
       let t='<table class="pure-table pure-table-striped" width="100%">';
       t+='<thead><tr><th>Monat</th><th align="right">Bezug</th><th align="right">Lfrg.</th><th align="right">Diff.</th></tr></thead>';
       t+='<tbody>';
       let monatsEndBzg=e180;
       let monatsEndLfg=e280;                  // für den laufenden Monat die Top-Werte
+      let lineno = 0;
       for (let i=value.length-1;i>=0;i-- ) {  // Tabelle bottom-up
         let arr = value[i].split(" ");
         let datum='20'+arr[0].slice(0,2)+'/'+arr[0].slice(2);
@@ -655,9 +704,16 @@ function updateElements(obj) {
         let diff=(bzg-lfg);
         let c= '#0000FF';           // color for diff
         if (diff>0) c='#FF0000';
-        t += '<tr><td>' + datum + '</td><td align="right">' + bzg.toFixed(3).replace('.',',') + '</td>';
-        t += '<td align="right">' + lfg.toFixed(3).replace('.',',') + '</td>';
-        t += '<td align="right" style="color:'+c+'">'+diff.toFixed(3).replace('.',',')+'</td></tr>';
+
+        if (lineno == 0) {
+          currentMonthData = { datum: datum, bezug:Number(arr[1]), lieferung:Number(arr[2]) };
+        }
+        let elementId = 'month_line_' + lineno; lineno++;
+
+        t += `<tr id="${elementId}"><td id="${elementId}_datum">` + datum + '</td>';
+        t += `<td id="${elementId}_bezug" align="right">` + toNumberString3f(bzg) + '</td>';
+        t += `<td id="${elementId}_lfrg" align="right">` + toNumberString3f(lfg) + '</td>';
+        t += `<td id="${elementId}_diff" align="right" style="color:` + c + '">' + toNumberString3f(diff) + '</td></tr>';
         monatsEndBzg=arr[1];  // die Topwerte für den vorhergehenden Monat in der nächsten for-loop
         monatsEndLfg=arr[2];
       }
@@ -758,7 +814,7 @@ function updateHTMLPageContent(key, value) {
   div = span.attr("div") || 0;
   if (div) {
     value = value / div;
-    value=value.toFixed(3).replace('.',',');
+    value = toNumberString3f(value);
   }
   span.html(pre + value + post);
 
@@ -769,7 +825,7 @@ function updateHTMLPageContent(key, value) {
   div = divt.attr("div") || 0;
   if (div) {
     value = value / div;
-    value=value.toFixed(3).replace('.',',');
+    value = toNumberString3f(value);
   }
   divt.html(pre + value + post);
 
@@ -811,14 +867,25 @@ function connectWS() {
   websock.onopen = function(evt) {
     $("#panel-home").show();
     //$("#panel-graf").show();
+
+    // Grundinfos abfragen
+
+    // Alle configs
     websock.send('{"command":"getconf"}');
+
+    // Wochentabelle
+    // Antwort darauf wird '{"today_in":57196650,"today_out":252430,"yestd_in":57180660,"yestd_out":252429,"data0":[5,19426,0], ...
+    websock.send('{"command":"energieWeek"}');
+
+    // Wochentabelle
+    // Antwort darauf wird '{ "monthlist": ["2312 10 11","2402 123 456","2601 1124 1457"]}'
+    websock.send('{"command":"energieMonth"}');
+
+    // Und noch die APP Version (um 1sec verzögert !)
     setTimeout( function(){
-      websock.send('{"command":"energieWeek"}');
-    },1200);
-    setTimeout( function(){
-      websock.send('{"command":"energieMonth","jahr":22}');
-    },2500);
       websock.send('{"command":"getAppInfo"}');
+    }, 1000);
+
     //console.log("connectws")
     ws_pingpong = setInterval(function() {
       websock.send('{"command":"ping"}');
