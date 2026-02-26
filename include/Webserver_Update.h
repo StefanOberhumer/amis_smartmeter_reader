@@ -10,18 +10,7 @@ class WebserverUpdateClass
     private:
         void onUploadRequest(AsyncWebServerRequest* request);
         void onUpload(AsyncWebServerRequest* request, const String& filename, size_t index, uint8_t* data, size_t len, bool final);
-        void onBody(AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total);
-
-        File _uploadFile;
-        typedef enum {
-            firmware = U_FLASH,
-            littlefs = U_FS,
-            anyOther,
-            monate,
-            none
-        } uploadFileType_t;
-        uploadFileType_t _uploadfiletype;
-        String _uploadFilename;
+        void updateCrcFromChunk(AsyncWebServerRequest* request, uint8_t* data, size_t data_offset, size_t data_len);
 };
 
 /* vim:set ts=4 et: */
