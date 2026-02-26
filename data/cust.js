@@ -87,6 +87,14 @@ var config_runtime = {
     "command": "config_runtime" // ohne führendes "/"
 };
 
+function filenameIsValidFirmware(filename) {
+    return filename.startsWith("firmware") && filename.endsWith(".bin");
+}
+
+function filenameIsValidLittleFS(filename) {
+    return filename.startsWith("littlefs");
+}
+
 function toNumberString(value, numberOfDecimals) {
     return value.toFixed(numberOfDecimals).replace('.',',');
 }
@@ -620,7 +628,7 @@ function socketMessageListener(evt) {   // incomming from ESP
     }
   }
   catch (e) {                   // Debug-Ausgaben
-    console.log(e);
+    //console.log(e);
     console.log(obj);
     return;
   }
@@ -840,6 +848,8 @@ function doReload(milliseconds) {
 }
 
 function doUpgrade () {               // firmware update
+  // tested: linux, firefox-140.8.0esr
+
   var file = $("input[name='upgrade']")[0].files[0];
   if(typeof file === "undefined") {
     alert("Zuerst muss eine lokale Datei gewählt werden!");
@@ -849,39 +859,100 @@ function doUpgrade () {               // firmware update
     amisRestore(file);
     return false;
   }
-  var data = new FormData();
-  data.append("update",file,file.name);       // www.mediaevent.de/javascript/ajax-2-xmlhttprequest.html
+  var formData = new FormData();
+
+  // file.size() can be inaccurate as it only changes if we
+  // select a new file via button "Auswahl"
+  // With a change in the Web-UI it would be possible to get correct size
+  // So: Currently disabled
+  //
+  //formData.append('SIZE', "" + file.size);
+
+  formData.append("update",file,file.name);       // www.mediaevent.de/javascript/ajax-2-xmlhttprequest.html
+
+  var pbar=$("#prgbar_update");
+
   var xhr = new XMLHttpRequest();     // https://javascript.info/xmlhttprequest
   var msg_ok = "Firmware geladen, Gerät wird neu gestartet. Die Verbindung wird in 25 Sekunden neu aufgebaut.";
-  var msg_err = "Fehler beim Laden der Datei. Bitte wiederholen. ";
+  var msg_err = "Fehler beim Laden der Datei. Bitte wiederholen.\n";
 
   var network_error = function(e) {
+    pbar.hide();
     alert(msg_err + " xhr request " + e.type);
   };
   xhr.addEventListener("error", network_error, false);
   xhr.addEventListener("abort", network_error, false);
+  // xhr.addEventListener("loadstart", function(e) {
+  /*xhr.addEventListener("loadend", function(e) {
+    console.log(e);
+    console.log(xhr);
+  });*/
   xhr.addEventListener("load", function(e) {
+    // Upload finished
+    //console.log(e);
+    //console.log(xhr);
+
+    const milliseconds_s = Date.now();
+    $("#prgbar_update").hide();
     if(xhr.status===200) {
-        if (file.name.startsWith("firmware") || file.name.startsWith("littlefs")) {
-          const milliseconds_s = Date.now();
-          $("#prgbar_update").hide();
-          alert(msg_ok);
-          const alertTimeNeededMs = Date.now() - milliseconds_s;
-          if (alertTimeNeededMs >= 25000) {
-              doReload(0);
-          } else {
-              doReload(25000 - alertTimeNeededMs);
-          }
+      // Upload was OK
+      if (filenameIsValidFirmware(file.name) || filenameIsValidLittleFS(file.name)) {
+        alert(msg_ok);
+        const alertTimeNeededMs = Date.now() - milliseconds_s;
+        if (alertTimeNeededMs >= 25000) {
+            doReload(0);
+        } else {
+            doReload(25000 - alertTimeNeededMs);
         }
+      }
+    } else if (xhr.status===599) {
+      // Upload error ... but system is rebooting
+        alert(msg_err + xhr.status.toString() + " " + xhr.statusText + "\nError: " + xhr.responseText+
+              "\n\nGerät wird neu gestartet. Die Verbindung wird in 25 Sekunden neu aufgebaut.");
+        const alertTimeNeededMs = Date.now() - milliseconds_s;
+        if (alertTimeNeededMs >= 25000) {
+            doReload(0);
+        } else {
+            doReload(25000 - alertTimeNeededMs);
+        }
+    } else {
+      // Upload raised an error
+      alert(msg_err + xhr.status.toString() + " " + xhr.statusText + "\nError: " + xhr.responseText);
     }
-    else alert(msg_err + xhr.status.toString() + " " + xhr.statusText + ", " + xhr.responseText);
-  }, false);
-  // xhr.upload.onprogress liefert keine vernünftigne Daten im Kurzzeitbereich
+  });
+
+  if (file.size > 100000) {
+    pbar.byLength = true;
+    pbar.prop('max', file.size);
+    // xhr.upload.progress liefert nur vernünftigne Werte für größere Daten
+    xhr.upload.addEventListener("progress", (e) => {
+      // console.log(e);
+      if (pbar.byLength === true) {
+        if (e.lengthComputable) {
+
+          //pbar.val(Math.trunc((e.loaded / e.total) * 100));
+          pbar.val(e.loaded);
+        } else {
+          pbar.byLength = false;
+          progressAnimate('prgbar_update', 15000);
+        }
+      }
+    });
+   }
+
   xhr.open("POST",UpdateUri);
-  xhr.send(data);
-  if (file.name.startsWith("firmware") || file.name.startsWith("littlefs"))
-    progressAnimate('prgbar_update',15000);
-  else progressAnimate('prgbar_update',400);
+  xhr.send(formData);
+  pbar.val(0);
+  pbar.show();
+  if (file.size <= 100000) {
+    pbar.byLength = false;
+    // xhr.upload.onprogress liefert keine vernünftigne Daten im Kurzzeitbereich
+    if (filenameIsValidFirmware(file.name) || filenameIsValidLittleFS(file.name)) {
+      progressAnimate('prgbar_update', 15000);
+    } else {
+      progressAnimate('prgbar_update', 400);
+    }
+  }
 }
 
 function mqttDetails() {  // display settings only if mqtt active
