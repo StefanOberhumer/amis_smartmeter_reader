@@ -583,10 +583,19 @@ void WebserverWsDataClass::wsClientRequest(AsyncWebSocketClient *client, char* r
         }
         EEPROMClear();
         Reboot.startReboot();
-    } else if (!strcmp(command, "set-runtime-useFilesFromFirmware")) {
+    } else if (!strcmp_P(command, PSTR("set-runtime-useFilesFromFirmware"))) {
         const char *onOff = root[F("value")].as<const char*>();
         if (onOff) {
             ApplicationRuntime.webUseFilesFromFirmware(strcmp(onOff, "on") == 0);
+            if (client) {
+                ws->text(client->id(), R"({"r":0,"m":"OK"})");
+            }
+        }
+    } else if (!strcmp_P(command, PSTR("set-runtime-updateFirmwareCheckCRC32"))) {
+        // {"command":"set-runtime-updateFirmwareCheckCRC32", "value":"off"}
+        const char *onOff = root[F("value")].as<const char*>();
+        if (onOff) {
+            ApplicationRuntime.updateFirmwareCheckCRC32(strcmp(onOff, "on") == 0);
             if (client) {
                 ws->text(client->id(), R"({"r":0,"m":"OK"})");
             }

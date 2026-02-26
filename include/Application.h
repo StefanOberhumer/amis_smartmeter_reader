@@ -22,6 +22,7 @@ class ApplicationClass
 // Werden nicht gespeichert und sind nur bis zum nächste Reboot gültig
 typedef struct {
     bool webUseFilesFromFirmware = true;
+    bool updateFirmwareCheckCRC32 = true;
 } ApplicationRuntime_t;
 
 class ApplicationRuntimeClass
@@ -29,6 +30,8 @@ class ApplicationRuntimeClass
     public:
         inline bool webUseFilesFromFirmware() { return _runtimeData.webUseFilesFromFirmware; };
         inline void webUseFilesFromFirmware(bool webUseFilesFromFirmware) { _runtimeData.webUseFilesFromFirmware = webUseFilesFromFirmware; };
+        inline bool updateFirmwareCheckCRC32() { return _runtimeData.updateFirmwareCheckCRC32; };
+        inline void updateFirmwareCheckCRC32(bool updateFirmwareCheckCRC32) { _runtimeData.updateFirmwareCheckCRC32 = updateFirmwareCheckCRC32; };
     private:
         ApplicationRuntime_t _runtimeData;
 
