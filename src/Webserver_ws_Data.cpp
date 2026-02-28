@@ -15,6 +15,7 @@
 #include "Mqtt.h"
 #include "Network.h"
 #include "Reboot.h"
+#include "RebootAtMidnight.h"
 #include "SystemMonitor.h"
 #include "Webserver.h"
 #include "Utils.h"
@@ -644,6 +645,20 @@ void WebserverWsDataClass::wsClientRequest(AsyncWebSocketClient *client, char* r
             LittleFS.remove(filename);
             filename += ".md5";
             LittleFS.remove(filename);
+        }
+    } else if (!strcmp_P(command, PSTR("browsertime"))) { // if not time set: use time from browser
+        time_t tv_sec_now = time(NULL);
+        if (tv_sec_now < __COMPILED_DATE_TIME_UTC_TIME_T__) {
+            uint32_t value = root[F("value")].as<uint32_t>();
+            if (value >= __COMPILED_DATE_TIME_UTC_TIME_T__) {
+                // Use time from browser
+                struct timeval ti;
+                ti.tv_sec = value;
+                ti.tv_usec = 0;
+                settimeofday(&ti, NULL);
+                LOGF_IP("Time sync (browser). (ts-old=%llu, ts-now=%llu, millis=%u)", tv_sec_now, ti.tv_sec, millis());
+                RebootAtMidnight.adjustTicker();
+            }
         }
     } else if (!strcmp(command, "dev-tools-button1")) {
         if (!client) {

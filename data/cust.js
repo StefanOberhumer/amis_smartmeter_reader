@@ -873,6 +873,9 @@ function connectWS() {
     // Alle configs
     websock.send('{"command":"getconf"}');
 
+    // Uhrzeit vom Browser senden
+    websock.send('{"command":"browsertime","value":' + Math.trunc(Date.now() / 1000) + '}');
+
     // Wochentabelle
     // Antwort darauf wird '{"today_in":57196650,"today_out":252430,"yestd_in":57180660,"yestd_out":252429,"data0":[5,19426,0], ...
     websock.send('{"command":"energieWeek"}');
