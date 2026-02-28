@@ -42,6 +42,14 @@ void LedSingleClass::turnOff() {
 }
 
 void LedSingleClass::turnBlink(uint32_t offIntervalMs, uint32_t onIntervalMs) {
+    if (_blinkIntervalsMs[0] == offIntervalMs &&
+        _blinkIntervalsMs[1] == onIntervalMs &&
+        ( _state == blinkOff || _state == blinkOn)
+        ) {
+        // nothing to change ... exit
+        return;
+    }
+
     _blinkIntervalsMs[0] = offIntervalMs;
     _blinkIntervalsMs[1] = onIntervalMs;
 
