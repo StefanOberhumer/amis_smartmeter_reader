@@ -255,7 +255,7 @@ static String getStatusJsonInfoNetwork()
     doc[F("status_wifi_gateway")] = gwaddr.toString();
     doc[F("status_wifi_netmask")] = nmaddr.toString();
 
-    doc[F("mqttStatus")] = Mqtt.isConnected() ?"connected" :"N/A";
+    doc[F("mqttStatus")] = FPSTR(Mqtt.GetStatus_pstr());
 
     String buffer;
     SERIALIZE_JSON_LOG(doc, buffer);

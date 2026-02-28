@@ -442,6 +442,17 @@ void MqttBaseClass::stop()
 }
 
 
+const char *MqttBaseClass::GetStatus_pstr() {
+    if (!_enabled) {
+        return PSTR("disabled");
+    }
+    if (isConnected()) {
+        return PSTR("connected");
+    }
+    return PSTR("disconnected");
+}
+
+
 MqttBaseClass Mqtt;
 
 /* vim:set ft=cpp ts=4 et: */

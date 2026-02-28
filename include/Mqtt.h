@@ -72,6 +72,8 @@ public:
 
     const MqttConfig_t &getConfigMqtt();
 
+    const char *GetStatus_pstr();
+
 private:
     bool _enabled;
 
