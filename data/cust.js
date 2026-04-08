@@ -773,7 +773,12 @@ function progressAnimate(id,time) {
 
 function doUpdateGeneral() {                 // button save config
   progressAnimate('prgbar_general',300);
-  //let boot=($("#use_auth").prop("checked")!=config_general.use_auth);
+  let authChanged = false;
+  if( ($("#use_auth").prop("checked") != config_general.use_auth) ||
+      ($("#auth_user").value != config_general.auth_user) ||
+      ($("#auth_passwd").value != config_general.auth_passwd) ) {
+    authChanged = true;
+  }
   $(".general").each(function () {
     //console.log($(this).prop('type'),this.name,this.value)
     if ($(this).prop('type') == 'checkbox') config_general[this.name] = $(this).prop('checked');
@@ -794,7 +799,9 @@ function doUpdateGeneral() {                 // button save config
   }
   websock.send(JSON.stringify(config_general));
   websock.send('{"command":"set-amisreader","key":"' + config_general.amis_key + '"}');
-  //if (boot) doReboot("Wenn die Authentifizierung ein- oder ausgeschaltet wurde, muss neu gebootet werden.\n")
+  if (authChanged && config_general.use_auth) {
+    doReload(200);
+  }
 }
 //TODO eigenes configfile - derzeit in general gespeichert (hier wegen progressAnimate extra funktion)
 function doUpdateEmulation() {                  // button save config

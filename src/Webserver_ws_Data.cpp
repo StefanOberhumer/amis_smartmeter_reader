@@ -78,26 +78,17 @@ void WebserverWsDataClass::init(AsyncWebServer& server)
     _wsCleanupTicker.attach_scheduled(1, std::bind(&WebserverWsDataClass::wsCleanupTaskCb, this));
     _sendDataTicker.attach_ms_scheduled(10, std::bind(&WebserverWsDataClass::sendDataTaskCb, this));
 
-    _simpleDigestAuth.setRealm("data websocket");
-
     reload();
 }
 
 void WebserverWsDataClass::reload()
 {
-    _ws.removeMiddleware(&_simpleDigestAuth);
-
-    if (!Config.use_auth) {
-        return;
+    AsyncAuthType _authMethod = (Config.use_auth) ? AsyncAuthType::AUTH_DIGEST : AsyncAuthType::AUTH_NONE;
+    _ws.setAuthentication(Config.auth_user, Config.auth_passwd, _authMethod);
+    if (Config.use_auth && Config.auth_user[0] && Config.auth_passwd[0]) {
+        // Authentication is enabled or got changed. Kick out all connected clients!
+        _ws.closeAll();
     }
-
-    _ws.enable(false);
-    _simpleDigestAuth.setUsername(Config.auth_user);
-    _simpleDigestAuth.setPassword(Config.auth_passwd);
-    _ws.addMiddleware(&_simpleDigestAuth);
-    //_ws.setAuthentication(Config.auth_user.c_str(), Config.auth_passwd.c_str());
-    _ws.closeAll();
-    _ws.enable(true);
 }
 
 void WebserverWsDataClass::wsCleanupTaskCb()
