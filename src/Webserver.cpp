@@ -132,7 +132,6 @@ void WebserverClass::init()
     _websrvUpdate.init(_server);
 
     // Initilisieren der Websocket Handler
-    _websrvWsConsole.init(_server);
     _websrvWsData.init(_server);
 
     // Eine 404 (Not Found) Site
@@ -220,7 +219,6 @@ void WebserverClass::onNotFound(AsyncWebServerRequest *request)
 
 void WebserverClass::reload()
 {
-    _websrvWsConsole.reload();
     _websrvWsData.reload();
 }
 
