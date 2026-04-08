@@ -636,6 +636,10 @@ function connectWS() {
   websock.onopen = function(evt) {
     $("#panel-home").show();
     //$("#panel-graf").show();
+
+    // Uhrzeit vom Browser senden
+    websock.send('{"command":"browsertime","value":' + Math.trunc(Date.now() / 1000) + '}');
+
     websock.send('{"command":"getconf"}');
     setTimeout( function(){
       websock.send('{"command":"energieWeek"}');
