@@ -217,11 +217,6 @@ void WebserverClass::onNotFound(AsyncWebServerRequest *request)
     }
 }
 
-void WebserverClass::reload()
-{
-    _websrvWsData.reload();
-}
-
 void WebserverClass::reloadCredentials()
 {
     if (_staticFilesServer == nullptr) {
@@ -248,7 +243,9 @@ void WebserverClass::reloadCredentials()
         } else {
             _staticFilesServer->setAuthentication(_auth_username, _auth_password); // AUTH_DIGEST is default (AUTH_BASIC)
         }
-        reload();
+
+        // Update the websockets also
+        _websrvWsData.reload();
     }
 }
 

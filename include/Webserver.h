@@ -17,7 +17,6 @@ class WebserverClass
         bool checkCredentials(AsyncWebServerRequest* request, bool sendErrorResponse);
 
     private:
-        void reload();
         void onNotFound(AsyncWebServerRequest *request);
         void responseBinaryDataWithETagCache(AsyncWebServerRequest* request, const char *contentType, bool utf8, const char *contentEncoding, const uint8_t* content, size_t len, const char *md5sum, bool checkCredentials);
 
