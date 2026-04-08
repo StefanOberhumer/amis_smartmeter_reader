@@ -752,6 +752,9 @@ function showPanel() {              // menu click select panel
   else if ($(this).attr('data')=='panel-log') {
     websock.send('{"command":"geteventlog","page":'+logpage+'}');
   }
+  else if ($(this).attr('data')=='panel-emulation') {
+    showHideShellyDetails();
+  }
   else if ($(this).attr('data')=='panel-update') {
     websock.send('{"command":"weekdata"}');
     greyButtons();
@@ -915,6 +918,27 @@ function thingsDetails() {  // display settings only if thingspeak active
 function authDetails() {  // display settings only if auth active
   if ($(this).prop('checked')) $(".auth_details").show();
   else $(".auth_details").hide();
+}
+
+function showHideShellyDetails() {  // display shelly settings
+  var anyShellyActive = false;
+  if ($('#shelly_smart_mtr_udp').prop('checked')) {
+    $(".shelly_details_udp").show();
+    anyShellyActive = true;
+  } else {
+    $(".shelly_details_udp").hide();
+  }
+  if ($('#shelly_smart_mtr_http').prop('checked')) {
+    $(".shelly_details_http").show();
+    anyShellyActive = true;
+  } else {
+    $(".shelly_details_http").hide();
+  }
+  if (anyShellyActive) {
+    $(".shelly_details").show();
+  } else {
+    $(".shelly_details").hide();
+  }
 }
 
 function developerModeEnabled() {  // display settings only if auth active
@@ -1228,6 +1252,8 @@ $(function() {            // main
   $("input[name='thingspeak_aktiv']").on("click", thingsDetails);
   $("input[name='developerModeEnabled']").on("click", developerModeEnabled);
   $("input[name='webUseFilesFromFirmware']").on("click", webUseFilesFromFirmware);
+  $("input[name='shelly_smart_mtr_udp']").on("click", showHideShellyDetails);
+  $("input[name='shelly_smart_mtr_http']").on("click", showHideShellyDetails);
   //$("input[name='smart_aktiv']").on("click", smart_mtr);
   $("input[name='use_auth']").on("click", authDetails);
   $(".button-upgrade").on("click", doUpgrade);      // firmware update
