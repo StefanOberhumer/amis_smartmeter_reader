@@ -263,6 +263,9 @@ int AmisReaderClass::decodeBuffer(uint8_t *buffer, size_t len, AmisReaderNumResu
     }
 
     // Datum & Uhrzeit rausholen und validieren
+    // Aufgezeichnete Beispiele:
+    //    0x0F 0x14 0xC9 0x5C 0x33 0x0D = winterzeit Sa, 28.03.2026 09:20:15
+    //    0x77 0x39 0xF7 0x5D 0x33 0x0D = sommerzeit So, 29.03.2026 23:57:55 (isDst (0x77 & 0x40) ist gesetzt)
     if (!Utils::MbusCP48IToTm(numresult.time, decrypted.valueDT)) {
         return -20;
     }
