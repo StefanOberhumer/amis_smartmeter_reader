@@ -191,7 +191,6 @@ void setup() {
 
     // Reboot um Mitternacht?
     RebootAtMidnight.init();
-    RebootAtMidnight.config();
     if (Config.reboot0) {
         RebootAtMidnight.enable();
         LOG_DP("RebootAtMidnight enabled");
