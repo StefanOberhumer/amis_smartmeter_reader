@@ -13,6 +13,7 @@
 #include "Reboot.h"
 #include "SystemMonitor.h"
 #include "unused.h"
+#include "Webserver.h"
 
 #include <LittleFS.h>
 
@@ -39,7 +40,19 @@ void WebserverUpdateClass::init(AsyncWebServer& server)
 
 void WebserverUpdateClass::onUpload(AsyncWebServerRequest* request, const String& filename, size_t index, uint8_t* data, size_t len, bool final)
 {
-    UNUSED_ARG(request);
+#if 1
+    if (!Webserver.checkCredentials(request, false)) {
+        // skip any update if credentials do not match
+        return;
+    }
+#else
+    if (!Webserver.checkCredentials(request, true)) { // return a 401 here
+        // We should add header "Connection: close" in this case to stop upload immediately
+        // But: request->requestAuthentication(); does not support adding headers
+        request->client()->stop();
+        return;
+    }
+#endif
 
     //Upload handler chunks in data
     if (!index) {  // Start der Übertragung: index==0
@@ -138,9 +151,11 @@ void WebserverUpdateClass::onUpload(AsyncWebServerRequest* request, const String
 
 void WebserverUpdateClass::onUploadRequest(AsyncWebServerRequest* request)
 {
-    // the request handler is triggered after the upload has finished...
-    AsyncWebServerResponse *response = request->beginResponse(200,F("text/html"),"");
-    request->send(response);
+    // The request handler triggers once the upload has finished and should return an appropriate HTTP status.
+    if (Webserver.checkCredentials(request, true)) {
+        AsyncWebServerResponse *response = request->beginResponse(200, F("text/html"), "Upload finished");
+        request->send(response);
+    }
     LOG_DP("WebserverUpdateClass::onUploadRequest()");
 }
 
