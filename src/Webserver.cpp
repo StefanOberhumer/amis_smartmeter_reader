@@ -28,7 +28,7 @@ R"(<!doctype html>
 </head>
 <body>
 <h1>Versions Upgrade / Datei Upload</h1><br>
-Upgrade vervollständigen: Im Filedialog bitte 'firmware.bin', 'littlefs.bin' oder eine andere Datei auswählen.<br><br><br>
+Upgrade vervollständigen: Im Filedialog bitte 'firmware.bin' oder eine andere Datei auswählen.<br><br><br>
 <form method='POST' action='/update' enctype='multipart/form-data' id="up">
     <input type='file' name='update'><input type='button' value='Update' onclick="btclick();">
 </form>

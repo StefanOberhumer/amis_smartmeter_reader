@@ -878,7 +878,7 @@ function doUpgrade () {               // firmware update
   xhr.addEventListener("abort", network_error, false);
   xhr.addEventListener("load", function(e) {
     if(xhr.status===200) {
-        if (file.name.startsWith("firmware") || file.name.startsWith("littlefs")) {
+        if (file.name.startsWith("firmware")) {
           const milliseconds_s = Date.now();
           $("#prgbar_update").hide();
           alert(msg_ok);
@@ -895,7 +895,7 @@ function doUpgrade () {               // firmware update
   // xhr.upload.onprogress liefert keine vernünftigne Daten im Kurzzeitbereich
   xhr.open("POST",UpdateUri);
   xhr.send(data);
-  if (file.name.startsWith("firmware") || file.name.startsWith("littlefs"))
+  if (file.name.startsWith("firmware"))
     progressAnimate('prgbar_update',15000);
   else progressAnimate('prgbar_update',400);
 }

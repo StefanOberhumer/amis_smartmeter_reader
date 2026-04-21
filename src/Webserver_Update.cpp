@@ -1,5 +1,5 @@
 /*
-    Handle updates of firmware, littlefs or any other fileupload (POST requests)
+    Handle updates of firmware or any other fileupload (POST requests)
     at http://<espiIp>/update
 
     Configuration changes get updated via the websochet and a command
@@ -70,19 +70,13 @@ void WebserverUpdateClass::onUpload(AsyncWebServerRequest* request, const String
             }
             _uploadfiletype = firmware;
             content_len = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-        } else if (_uploadFilename == F("littlefs.bin")) {
-            if (!Reboot.startUpdateLittleFS()) {
-                return;
-            }
-            _uploadfiletype = littlefs;
-            content_len = ((size_t) &_FS_end - (size_t) &_FS_start);        // eigentlich Größe d. Flash-Partition
         } else {
             _uploadfiletype = anyOther;// anderes File
         }
 
         //eprintf("command: %d  content_len: %x  request: %x \n",cmd,content_len,request->contentLength());
         // SPIFFS-Partition: eprintf("_FS_start %x;  _FS_end %x; Size: %x\n",(size_t)&_FS_start,(size_t)&_FS_end,(size_t)&_FS_end-(size_t)&_FS_start);
-        if (_uploadfiletype == firmware || _uploadfiletype == littlefs) {
+        if (_uploadfiletype == firmware) {
             Update.runAsync(true);
             if (!Update.begin(content_len, _uploadfiletype)) {
                 Update.printError(Serial);
@@ -105,14 +99,14 @@ void WebserverUpdateClass::onUpload(AsyncWebServerRequest* request, const String
 
 
     // jetzt kommen die Daten:
-    if (_uploadfiletype == firmware || _uploadfiletype == littlefs) { // Update Flash
+    if (_uploadfiletype == firmware) { // Update Flash
         if (!Update.hasError()) {
             if (Update.write(data, len) != len) {
                 LOGF_EP("Error writing to flash: %s", _uploadFilename.c_str());
                 Update.printError(Serial);
             }
         }
-    } else if (_uploadfiletype == anyOther || _uploadfiletype == monate) { // write "any other file" content
+    } else { // just write "any other file" content to file system
         if (_uploadFile) {
             if (_uploadFile.write(data, len) != len) {
                 LOGF_EP("Error writing file: %s", _uploadFilename.c_str());
@@ -121,7 +115,7 @@ void WebserverUpdateClass::onUpload(AsyncWebServerRequest* request, const String
     }
 
     if (final) {  // Ende Übertragung erreicht
-        if (_uploadfiletype == firmware || _uploadfiletype == littlefs) {
+        if (_uploadfiletype == firmware) {
             // Flash oder LittleFS Update
             if (Update.end(true)) {
                 LOG_IP("Update succes.");
@@ -130,11 +124,7 @@ void WebserverUpdateClass::onUpload(AsyncWebServerRequest* request, const String
                 Update.printError(Serial);
                 //return request->send(400, "text/plain", "Could not end OTA");
             }
-            if (_uploadfiletype == firmware) {
-                Reboot.endUpdateFirmware();
-            } else { // _uploadfiletype == littlefs
-                Reboot.endUpdateLittleFS();
-            }
+            Reboot.endUpdateFirmware();
         } else {                          // File write
             if (_uploadFile) {
                 _uploadFile.close();

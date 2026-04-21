@@ -14,9 +14,12 @@ class WebserverUpdateClass
         File _uploadFile;
         typedef enum {
             firmware = U_FLASH,
-            littlefs = U_FS,
-            anyOther,
             monate,
+            // tageswerte,      ... must be reloaded after upload
+            // config_general,  ... must be reloaded after upload
+            // config_mqtt,     ... must be reloaded after upload
+            // config_wifi,     ... must be reloaded after upload
+            anyOther,
             none
         } uploadFileType_t;
         uploadFileType_t _uploadfiletype;
