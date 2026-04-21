@@ -118,7 +118,7 @@ void WebserverUpdateClass::onUpload(AsyncWebServerRequest* request, const String
         if (_uploadfiletype == firmware) {
             // Flash oder LittleFS Update
             if (Update.end(true)) {
-                LOG_IP("Update succes.");
+                LOG_IP("Update success.");
             } else {
                 LOG_EP("Update failed");
                 Update.printError(Serial);
