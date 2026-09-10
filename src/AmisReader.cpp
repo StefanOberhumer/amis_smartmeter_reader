@@ -192,15 +192,8 @@ int AmisReaderClass::decodeBuffer(uint8_t *buffer, size_t len, AmisReaderNumResu
 
     struct decryptedTelegramData_SND_UD decrypted; // wir decodieren 80 Bytes ( 5 * 16 )
     uint8_t *decrypted_ptr = (uint8_t *) &decrypted;
-#if 0
-    AES128_CBC_decrypt_buffer(decrypted_ptr,    &encryptedSndUD->encryptedData[0],  16, _key, initialVector);
-    AES128_CBC_decrypt_buffer(decrypted_ptr+16, &encryptedSndUD->encryptedData[16], 16, nullptr, nullptr);
-    AES128_CBC_decrypt_buffer(decrypted_ptr+32, &encryptedSndUD->encryptedData[32], 16, nullptr, nullptr);
-    AES128_CBC_decrypt_buffer(decrypted_ptr+48, &encryptedSndUD->encryptedData[48], 16, nullptr, nullptr);
-    AES128_CBC_decrypt_buffer(decrypted_ptr+64, &encryptedSndUD->encryptedData[64], 16, nullptr, nullptr);
-#else
-    AES128_CBC_decrypt_buffer(decrypted_ptr,    &encryptedSndUD->encryptedData[0],  16*5, nullptr, initialVector);
-#endif
+    
+    AES128_CBC_decrypt_buffer(decrypted_ptr,    &encryptedSndUD->encryptedData[0],  16*5, _key, initialVector);
 
     if (decrypted.filler_prev[0] != 0x2f || decrypted.filler_prev[1] != 0x2f) {
         return -8; // Füllbytes vorne
