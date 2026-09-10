@@ -116,10 +116,13 @@ void LogfileClass::loop()
         return;
     }
     // Adapt pagno to be in valid range
-    if (request.pageNo == 0) {
+    uint32_t pages = noOfPages();
+    if (pages == 0) {
+       request.pageNo = 1;
+    } else if (request.pageNo == 0) {
         request.pageNo = 1;
-    } else if (request.pageNo > noOfPages()) {
-        request.pageNo = noOfPages();
+    } else if (request.pageNo > pages) {
+        request.pageNo = pages;
     }
 
     uint32_t firstEntry, lastEntry;
