@@ -115,19 +115,15 @@ void WebserverWsDataClass::sendDataTaskCb()
 
     // 2.) Handle our _clientRequests queue
     _clientRequest_t request;
+    if (!_clientRequests.pop(request)) {
+        return;
+    }
 
-    // max waste 70ms request per call of this function
-    uint32_t start = millis();
-    do {
-        if (!_clientRequests.pop(request)) {
-            return;
-        }
-        if (request.requestData) {
-            AsyncWebSocketClient *client = _ws.client(request.clientId);
-            wsClientRequest(client, request.requestData, request.requestLen);
-            free(request.requestData);
-        }
-    } while (millis() - start < 70);
+    if (request.requestData) {
+        AsyncWebSocketClient *client = _ws.client(request.clientId);
+        wsClientRequest(client, request.requestData, request.requestLen);
+        free(request.requestData);		 
+    }
 }
 
 
@@ -158,6 +154,7 @@ void WebserverWsDataClass::onWebsocketEvent(AsyncWebSocket* server, AsyncWebSock
                 request.requestLen = infolen;
                 if (!_clientRequests.push(request)) {
                     LOG_EP("Request queue full!");
+                    free(request.requestData);
                 }
             }
             SYSTEMMONITOR_STAT();
@@ -185,6 +182,7 @@ void WebserverWsDataClass::onWebsocketEvent(AsyncWebSocket* server, AsyncWebSock
                 request.requestLen = infolen;
                 if (!_clientRequests.push(request)) {
                     LOG_EP("Request queue full!");
+                    free(request.requestData);
                 }
             }
         }
