@@ -223,6 +223,8 @@ void loop() {
 
     AmisReader.loop();  // Zähler auslesen
 
+    yield(); // geben wir dem System mal Zeit sich um den System-Context (WiFi, Serial, ... zu kümmern)
+
     Log.loop(); // Eine Seite des Logfiles an einen Websocket client senden
 
     LedBlue.loop();
